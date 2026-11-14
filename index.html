@@ -1,0 +1,1163 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="校园失物招领：发布、浏览和搜索失物信息。使用原生 HTML、CSS、JavaScript 和 localStorage。">
+  <title>校园失物招领 · 让遗失有回音</title>
+  <style>
+    :root {
+      color-scheme: light;
+      --ink: #1d3530;
+      --muted: #6c7e75;
+      --green: #27624b;
+      --line: #e1e7df;
+      --paper: #fafbf7;
+    }
+
+    * { box-sizing: border-box; }
+    html { scroll-behavior: smooth; }
+
+    body {
+      margin: 0;
+      background: var(--paper);
+      color: var(--ink);
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI",
+        "PingFang SC", "Microsoft YaHei", sans-serif;
+      line-height: 1.6;
+    }
+
+    button, input { font: inherit; }
+    button { cursor: pointer; border: 0; }
+    button:disabled { opacity: .6; cursor: wait; }
+    [hidden] { display: none !important; }
+
+    button:focus-visible, a:focus-visible, input:focus-visible {
+      outline: 3px solid #b3cb61;
+      outline-offset: 3px;
+    }
+
+    .wrap { max-width: 1220px; margin: auto; padding: 0 32px; }
+
+    .nav {
+      min-height: 90px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 20px;
+      border-bottom: 1px solid var(--line);
+    }
+
+    .brand {
+      display: flex;
+      gap: 12px;
+      align-items: center;
+      font-size: 19px;
+      font-weight: 750;
+    }
+
+    .brand-icon {
+      background: var(--green);
+      color: white;
+      width: 38px;
+      height: 38px;
+      border-radius: 12px;
+      display: grid;
+      place-items: center;
+    }
+
+    .brand-icon svg { width: 23px; height: 23px; }
+    .nav-note { font-size: 13px; color: var(--muted); }
+
+    .hero {
+      padding: 46px 0 38px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 32px;
+    }
+
+    .eyebrow {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      color: var(--green);
+      font-size: 12px;
+      font-weight: 650;
+      letter-spacing: .14em;
+    }
+
+    .dot {
+      width: 7px;
+      height: 7px;
+      border-radius: 50%;
+      background: #729651;
+    }
+
+    h1 {
+      margin: 12px 0;
+      font-size: clamp(29px, 3.4vw, 43px);
+      line-height: 1.35;
+      letter-spacing: -.04em;
+    }
+
+    .hero p { margin: 0; color: var(--muted); font-size: 14px; }
+
+    .hero-note {
+      border-left: 2px solid #ced89b;
+      padding: 7px 0 7px 20px;
+      flex-shrink: 0;
+      font-size: 13px;
+      color: var(--muted);
+    }
+
+    .hero-note strong {
+      display: block;
+      color: var(--ink);
+      margin-bottom: 3px;
+      font-size: 15px;
+    }
+
+    main {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) 365px;
+      align-items: start;
+      gap: 26px;
+      padding-bottom: 35px;
+    }
+
+    .panel {
+      background: #fff;
+      border: 1px solid var(--line);
+      border-radius: 20px;
+    }
+
+    .board { padding: 26px; min-height: 620px; }
+
+    .section-top {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 15px;
+      margin-bottom: 5px;
+    }
+
+    h2 { font-size: 20px; margin: 0; }
+
+    .count {
+      font-size: 12px;
+      padding: 4px 11px;
+      border-radius: 30px;
+      background: #f0f4e9;
+      color: #526346;
+      white-space: nowrap;
+    }
+
+    .subtle {
+      color: var(--muted);
+      font-size: 12px;
+      margin: 0 0 22px;
+    }
+
+    .search { display: flex; gap: 9px; margin: 18px 0 22px; }
+    .search-field { position: relative; flex: 1; min-width: 0; }
+
+    .search-field svg {
+      width: 19px;
+      position: absolute;
+      left: 13px;
+      top: 14px;
+      color: #7e8b82;
+      pointer-events: none;
+    }
+
+    .search input {
+      width: 100%;
+      padding-left: 40px;
+      padding-right: 36px;
+    }
+
+    input {
+      min-width: 0;
+      border: 1px solid #dce3da;
+      background: #fff;
+      border-radius: 10px;
+      color: var(--ink);
+      padding: 11px 12px;
+      min-height: 46px;
+      font-size: 13px;
+    }
+
+    input::placeholder { color: #9aaba0; }
+    input:focus { border-color: #7eaa87; outline: 2px solid #e1ebd6; }
+
+    .clear-search {
+      position: absolute;
+      right: 6px;
+      top: 8px;
+      width: 31px;
+      height: 31px;
+      border-radius: 6px;
+      color: var(--muted);
+      background: transparent;
+      font-size: 19px;
+    }
+
+    .primary {
+      background: var(--green);
+      color: #fff;
+      border-radius: 10px;
+      padding: 11px 21px;
+      min-height: 46px;
+      font-size: 13px;
+      font-weight: 600;
+    }
+
+    .primary:hover { background: #1b503c; }
+
+    .results {
+      list-style: none;
+      padding: 0;
+      margin: 0;
+      display: grid;
+      gap: 13px;
+    }
+
+    .item-card {
+      border: 1px solid var(--line);
+      border-radius: 14px;
+      padding: 18px;
+    }
+
+    .card-top { display: flex; align-items: flex-start; gap: 12px; }
+
+    .item-thumbnail {
+      width: 64px;
+      height: 64px;
+      border-radius: 10px;
+      object-fit: cover;
+      flex-shrink: 0;
+      background: #f2f5eb;
+    }
+
+    .item-heading { flex: 1; min-width: 0; }
+
+    .item-title {
+      font-size: 17px;
+      margin: 0 0 4px;
+      overflow-wrap: anywhere;
+      line-height: 1.5;
+    }
+
+    .published { color: #89968d; font-size: 11px; margin: 0; }
+
+    .status {
+      background: #f1f4df;
+      color: #69733b;
+      border-radius: 6px;
+      font-size: 11px;
+      padding: 3px 8px;
+      white-space: nowrap;
+    }
+
+    .item-data {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8px 16px;
+      margin: 17px 0 15px;
+      font-size: 12px;
+    }
+
+    .item-data div { min-width: 0; overflow-wrap: anywhere; }
+    .item-data dt { display: inline; color: var(--muted); }
+    .item-data dd { display: inline; margin: 0; }
+
+    .card-bottom {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      border-top: 1px solid #eff2eb;
+      padding-top: 12px;
+      gap: 10px;
+    }
+
+    .contact-summary {
+      font-size: 12px;
+      color: var(--muted);
+      overflow-wrap: anywhere;
+    }
+
+    .detail-button {
+      background: #eff5ed;
+      color: var(--green);
+      padding: 7px 12px;
+      border-radius: 8px;
+      font-size: 12px;
+      font-weight: 600;
+      white-space: nowrap;
+    }
+
+    .detail-button:hover { background: #e0ecdb; }
+
+    .empty {
+      text-align: center;
+      padding: 64px 10px 70px;
+      color: var(--muted);
+    }
+
+    .empty-illustration {
+      width: 95px;
+      height: 95px;
+      border-radius: 30px;
+      background: #f1f5e6;
+      margin: 0 auto 22px;
+      display: grid;
+      place-items: center;
+      transform: rotate(-7deg);
+    }
+
+    .empty-illustration svg {
+      width: 48px;
+      height: 48px;
+      color: #779160;
+      transform: rotate(7deg);
+    }
+
+    .empty h3 {
+      font-size: 16px;
+      color: #52634d;
+      margin: 0 0 7px;
+      font-weight: 600;
+    }
+
+    .empty p { font-size: 13px; margin: 0; }
+
+    .empty-link {
+      display: inline-block;
+      margin-top: 18px;
+      color: var(--green);
+      font-size: 13px;
+      text-underline-offset: 4px;
+    }
+
+    .publish { padding: 26px; border-top: 4px solid var(--green); }
+    .publish h2 { font-size: 19px; }
+
+    .publish-intro {
+      font-size: 12px;
+      color: var(--muted);
+      margin: 7px 0 21px;
+    }
+
+    .field { margin-bottom: 16px; }
+
+    .field label {
+      display: block;
+      font-size: 12px;
+      font-weight: 600;
+      margin-bottom: 6px;
+    }
+
+    .required { color: #a9654a; margin-left: 3px; }
+
+    .optional {
+      color: #98a397;
+      font-weight: 400;
+      font-size: 11px;
+      margin-left: 5px;
+    }
+
+    .field input { width: 100%; }
+
+    input[type=file] {
+      font-size: 11px;
+      padding: 9px;
+      background: #fcfdf9;
+    }
+
+    input[type=file]::file-selector-button {
+      background: #edf2e5;
+      border: 0;
+      border-radius: 5px;
+      padding: 5px 8px;
+      margin-right: 7px;
+      color: #526346;
+      cursor: pointer;
+    }
+
+    .help {
+      font-size: 11px;
+      color: #8b978d;
+      margin: 6px 0 0;
+      line-height: 1.6;
+    }
+
+    .publish .primary { width: 100%; margin-top: 3px; }
+
+    .storage-note {
+      border-radius: 12px;
+      padding: 14px 16px;
+      margin-top: 18px;
+      background: #f0f3e5;
+      color: #79866b;
+      font-size: 11px;
+      line-height: 1.8;
+    }
+
+    footer {
+      display: flex;
+      justify-content: space-between;
+      flex-wrap: wrap;
+      gap: 10px;
+      border-top: 1px solid var(--line);
+      padding: 20px 0 28px;
+      color: #8c998e;
+      font-size: 11px;
+    }
+
+    .notice {
+      position: fixed;
+      left: 50%;
+      bottom: 28px;
+      transform: translateX(-50%);
+      padding: 12px 22px;
+      border-radius: 12px;
+      background: #214f3b;
+      color: #fff;
+      max-width: min(90vw, 600px);
+      box-shadow: 0 8px 32px #183f3326;
+      z-index: 10;
+      font-size: 14px;
+    }
+
+    .notice.error { background: #8c4137; }
+
+    .storage-warning {
+      padding: 12px 16px;
+      margin-bottom: 22px;
+      border: 1px solid #e1b7aa;
+      border-radius: 10px;
+      background: #fff4ed;
+      color: #8c4137;
+      font-size: 13px;
+    }
+
+    dialog {
+      border: 0;
+      border-radius: 20px;
+      padding: 28px;
+      color: var(--ink);
+      width: min(500px, calc(100% - 32px));
+      max-height: 88vh;
+      box-shadow: 0 25px 100px #102e3330;
+    }
+
+    dialog::backdrop {
+      background: #17352d66;
+      backdrop-filter: blur(3px);
+    }
+
+    .dialog-top {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 14px;
+      margin-bottom: 18px;
+    }
+
+    .dialog-top h2 { font-size: 18px; }
+
+    .close {
+      background: #f0f4ed;
+      width: 32px;
+      height: 32px;
+      border-radius: 50%;
+      color: #52634d;
+      font-size: 20px;
+    }
+
+    .detail-title {
+      font-size: 22px;
+      margin: 0 0 12px;
+      overflow-wrap: anywhere;
+    }
+
+    .detail-image {
+      width: 100%;
+      max-height: 280px;
+      object-fit: contain;
+      border-radius: 12px;
+      background: #f3f5ef;
+      margin: 12px 0;
+    }
+
+    .detail-data {
+      font-size: 14px;
+      display: grid;
+      grid-template-columns: 82px 1fr;
+      gap: 13px;
+      padding: 17px 0;
+      margin: 0;
+    }
+
+    .detail-data dt { color: var(--muted); }
+    .detail-data dd { margin: 0; overflow-wrap: anywhere; }
+    .reveal { width: 100%; margin-top: 12px; }
+    .detail-help { color: var(--muted); font-size: 12px; margin: 16px 0 0; }
+
+    @media (max-width: 950px) {
+      main { grid-template-columns: minmax(0, 1fr) 320px; gap: 18px; }
+      .board, .publish { padding: 21px; }
+      .hero-note { display: none; }
+      .wrap { padding: 0 22px; }
+    }
+
+    @media (max-width: 740px) {
+      .wrap { padding: 0 16px; }
+      .nav { min-height: 75px; }
+      .nav-note { display: none; }
+      .hero { padding: 31px 0 28px; }
+      main { grid-template-columns: 1fr; }
+      .board { min-height: 380px; padding: 21px 18px; }
+      .empty { padding: 40px 6px; }
+      .publish { padding: 23px; }
+      .hero p { font-size: 12px; }
+      .item-data { grid-template-columns: 1fr; }
+      .brand { font-size: 17px; }
+      .search { gap: 7px; }
+      .search .primary { padding: 11px 16px; }
+      footer { font-size: 10px; }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      html { scroll-behavior: auto; }
+    }
+  </style>
+</head>
+
+<body>
+  <div class="wrap">
+    <header class="nav">
+      <div class="brand">
+        <span class="brand-icon" aria-hidden="true">
+          <svg viewBox="0 0 24 24" fill="none"
+               stroke="currentColor" stroke-width="1.7">
+            <path d="M4 7h16v13H4zM8 7V4h8v3M9 13h6M12 10v6"
+                  stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+        </span>
+        校园失物招领
+      </div>
+      <span class="nav-note">校园互助 · 让善意被看见</span>
+    </header>
+
+    <section class="hero" aria-labelledby="pageTitle">
+      <div>
+        <div class="eyebrow">
+          <span class="dot"></span> CAMPUS LOST &amp; FOUND
+        </div>
+        <h1 id="pageTitle">让每一件遗失，都有回音。</h1>
+        <p>发布一条失物信息，让一次不小心，遇见一份热心。</p>
+      </div>
+      <div class="hero-note">
+        <strong>小小线索，也有大大可能。</strong>
+        从物品名称或丢失地点开始寻找。
+      </div>
+    </section>
+
+    <div id="storageWarning" class="storage-warning"
+         role="alert" hidden></div>
+
+    <main>
+      <section class="panel board" aria-labelledby="listTitle">
+        <div class="section-top">
+          <h2 id="listTitle">失物信息</h2>
+          <span id="resultCount" class="count"
+                aria-live="polite">共 0 条</span>
+        </div>
+        <p class="subtle">最新发布的信息会显示在最前面</p>
+
+        <form id="searchForm" class="search" role="search">
+          <div class="search-field">
+            <svg viewBox="0 0 24 24" fill="none"
+                 stroke="currentColor" stroke-width="1.8"
+                 aria-hidden="true">
+              <circle cx="10.5" cy="10.5" r="6.5"/>
+              <path d="m16 16 4.5 4.5" stroke-linecap="round"/>
+            </svg>
+
+            <input type="search" id="searchInput"
+                   placeholder="搜索物品名称或丢失地点"
+                   aria-label="搜索物品名称或丢失地点"
+                   autocomplete="off">
+
+            <button id="clearSearch" class="clear-search"
+                    type="button" aria-label="清空搜索" hidden>×</button>
+          </div>
+          <button type="submit" class="primary">搜索</button>
+        </form>
+
+        <ul id="itemList" class="results" aria-label="失物列表"></ul>
+
+        <div id="emptyState" class="empty">
+          <div class="empty-illustration" aria-hidden="true">
+            <svg viewBox="0 0 64 64" fill="none"
+                 stroke="currentColor" stroke-width="2">
+              <path d="M13 23h38v31H13zM23 23V12h18v11M24 37h16M32 29v16"
+                    stroke-linecap="round" stroke-linejoin="round"/>
+              <path d="m6 14 4 3M50 9l-2 5M57 25h-3"
+                    stroke-linecap="round"/>
+            </svg>
+          </div>
+          <h3 id="emptyTitle">还没有失物信息</h3>
+          <p id="emptyText">发布第一条信息，让寻找从这里开始。</p>
+          <a class="empty-link" id="emptyLink" href="#title">
+            发布失物信息 ↗
+          </a>
+        </div>
+      </section>
+
+      <aside class="panel publish" aria-labelledby="publishTitle">
+        <h2 id="publishTitle">发布失物</h2>
+        <p class="publish-intro">
+          多一点描述，就多一点找回的机会。<br>
+          带 <span class="required">*</span> 的项目为必填项。
+        </p>
+
+        <form id="publishForm" novalidate>
+          <div class="field">
+            <label for="title">
+              物品名称<span class="required">*</span>
+            </label>
+            <input id="title" name="title" required maxlength="100"
+                   placeholder="例如：黑色校园卡卡套"
+                   autocomplete="off">
+          </div>
+
+          <div class="field">
+            <label for="location">
+              丢失地点<span class="required">*</span>
+            </label>
+            <input id="location" name="location" required maxlength="150"
+                   placeholder="例如：图书馆三楼自习室"
+                   autocomplete="off">
+          </div>
+
+          <div class="field">
+            <label for="time">
+              丢失时间<span class="optional">选填</span>
+            </label>
+            <input id="time" name="time" type="datetime-local">
+          </div>
+
+          <div class="field">
+            <label for="contact">
+              联系方式<span class="required">*</span>
+            </label>
+            <input id="contact" name="contact" required maxlength="120"
+                   placeholder="手机号码、微信号或邮箱"
+                   autocomplete="off">
+            <p class="help">列表中隐藏部分内容，详情中可点击查看。</p>
+          </div>
+
+          <div class="field">
+            <label for="image">
+              物品图片<span class="optional">选填</span>
+            </label>
+            <input id="image" name="image" type="file"
+                   accept="image/png,image/jpeg,image/webp,image/gif">
+            <p id="imageHelp" class="help">
+              PNG / JPG / WEBP / GIF，最大 500KB。
+            </p>
+          </div>
+
+          <button id="publishButton" type="submit" class="primary">
+            发布失物信息 ＋
+          </button>
+        </form>
+
+        <div class="storage-note">
+          信息仅保存在当前浏览器中，刷新页面后仍可查看。
+          请保留浏览器的网站数据。
+        </div>
+      </aside>
+    </main>
+
+    <footer>
+      <span>校园失物招领 · 一起让失物回家</span>
+      <span>请如实发布信息，认领时核对物品特征。</span>
+    </footer>
+  </div>
+
+  <div id="notice" class="notice"
+       role="status" aria-live="polite" hidden></div>
+
+  <dialog id="detailDialog" aria-labelledby="detailHeading">
+    <div class="dialog-top">
+      <h2 id="detailHeading">失物详情</h2>
+      <button id="closeDetail" class="close"
+              type="button" aria-label="关闭详情">×</button>
+    </div>
+
+    <h3 id="detailTitle" class="detail-title"></h3>
+    <span id="detailStatus" class="status"></span>
+    <img id="detailImage" class="detail-image" alt="" hidden>
+
+    <dl class="detail-data">
+      <dt>丢失地点</dt><dd id="detailLocation"></dd>
+      <dt>丢失时间</dt><dd id="detailTime"></dd>
+      <dt>发布时间</dt><dd id="detailCreatedAt"></dd>
+      <dt>联系方式</dt><dd id="detailContact"></dd>
+    </dl>
+
+    <button id="revealContact" class="primary reveal" type="button">
+      查看联系方式
+    </button>
+    <p class="detail-help">联系对方时，请说明物品名称和相关特征。</p>
+  </dialog>
+
+  <template id="itemTemplate">
+    <li class="item-card">
+      <div class="card-top">
+        <img class="item-thumbnail" alt="" hidden>
+        <div class="item-heading">
+          <h3 class="item-title"></h3>
+          <p class="published"></p>
+        </div>
+        <span class="status"></span>
+      </div>
+
+      <dl class="item-data">
+        <div>
+          <dt>丢失地点：</dt><dd class="item-location"></dd>
+        </div>
+        <div>
+          <dt>丢失时间：</dt><dd class="item-time"></dd>
+        </div>
+      </dl>
+
+      <div class="card-bottom">
+        <span class="contact-summary"></span>
+        <button class="detail-button" type="button">查看详情 ↗</button>
+      </div>
+    </li>
+  </template>
+
+  <script>
+    'use strict';
+
+    // 原生 JavaScript，数据保存在当前浏览器的 localStorage 中。
+    const STORAGE_KEY = 'lostItems';
+    const MAX_IMAGE_BYTES = 500 * 1024;
+    const IMAGE_TYPES = new Set([
+      'image/png',
+      'image/jpeg',
+      'image/webp',
+      'image/gif'
+    ]);
+
+    const byId = id => document.getElementById(id);
+    const form = byId('publishForm');
+    const searchInput = byId('searchInput');
+    const dialog = byId('detailDialog');
+
+    let noticeTimer;
+    let activeItem = null;
+    let storageReadable = true;
+    let items = loadItems();
+
+    function showNotice(message, isError = false) {
+      const notice = byId('notice');
+      clearTimeout(noticeTimer);
+      notice.textContent = message;
+      notice.classList.toggle('error', isError);
+      notice.hidden = false;
+
+      noticeTimer = setTimeout(() => {
+        notice.hidden = true;
+      }, 6000);
+    }
+
+    function storageWarning(message) {
+      const warning = byId('storageWarning');
+      warning.textContent = message;
+      warning.hidden = !message;
+    }
+
+    function loadItems() {
+      try {
+        const raw = localStorage.getItem(STORAGE_KEY);
+        const data = raw === null ? [] : JSON.parse(raw);
+
+        const valid = Array.isArray(data) && data.every(item =>
+          item &&
+          typeof item === 'object' &&
+          typeof item.id === 'string' &&
+          typeof item.title === 'string' &&
+          typeof item.location === 'string' &&
+          typeof item.contact === 'string' &&
+          typeof item.time === 'string' &&
+          typeof item.status === 'string' &&
+          typeof item.createdAt === 'number' &&
+          Number.isFinite(item.createdAt)
+        );
+
+        if (!valid) {
+          throw new Error('Invalid stored records');
+        }
+
+        storageReadable = true;
+        storageWarning('');
+        return data;
+      } catch (error) {
+        storageReadable = false;
+        storageWarning(
+          '无法读取浏览器保存的数据。为避免覆盖原数据，暂不允许发布。' +
+          '请检查浏览器存储权限或原有数据。'
+        );
+        return [];
+      }
+    }
+
+    // 写入成功后才更新界面。
+    // 如果保存失败，不清空用户填写的表单。
+    function saveItems(nextItems) {
+      if (!storageReadable) {
+        showNotice(
+          '存储不可用，请先检查浏览器存储权限或原有数据。',
+          true
+        );
+        return false;
+      }
+
+      try {
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(nextItems));
+        items = nextItems;
+        return true;
+      } catch (error) {
+        showNotice(
+          '保存失败：浏览器存储空间不足或未允许存储。' +
+          '请使用更小的图片或检查浏览器设置。',
+          true
+        );
+        return false;
+      }
+    }
+
+    function maskContact(value) {
+      const text = String(value).trim();
+
+      if (/^\d{11}$/.test(text)) {
+        return text.slice(0, 3) + '****' + text.slice(-4);
+      }
+
+      const at = text.indexOf('@');
+      if (at > 0) {
+        return text[0] + '***' + text.slice(at);
+      }
+
+      const chars = Array.from(text);
+
+      if (chars.length > 7) {
+        return chars.slice(0, 3).join('') +
+          '****' +
+          chars.slice(-4).join('');
+      }
+
+      if (chars.length > 2) {
+        return chars[0] + '***' + chars[chars.length - 1];
+      }
+
+      return '***';
+    }
+
+    function formatTime(value, fallback = '未填写') {
+      if (!value) return fallback;
+
+      const date = new Date(value);
+      if (!Number.isFinite(date.getTime())) return fallback;
+
+      const pad = number => String(number).padStart(2, '0');
+
+      return date.getFullYear() + '-' +
+        pad(date.getMonth() + 1) + '-' +
+        pad(date.getDate()) + ' ' +
+        pad(date.getHours()) + ':' +
+        pad(date.getMinutes());
+    }
+
+    function validImageData(value) {
+      return typeof value === 'string' &&
+        value.length <= MAX_IMAGE_BYTES &&
+        /^data:image\/(png|jpeg|webp|gif);base64,[A-Za-z0-9+/]+=*$/.test(value);
+    }
+
+    function renderItems() {
+      const query = searchInput.value.trim().toLocaleLowerCase();
+
+      const filtered = items.filter(item =>
+        !query ||
+        item.title.toLocaleLowerCase().includes(query) ||
+        item.location.toLocaleLowerCase().includes(query)
+      ).sort((a, b) => b.createdAt - a.createdAt);
+
+      const list = byId('itemList');
+      const fragment = document.createDocumentFragment();
+
+      for (const item of filtered) {
+        const card = byId('itemTemplate').content.cloneNode(true);
+
+        // 使用 textContent，防止用户输入被当成 HTML 执行。
+        card.querySelector('.item-title').textContent = item.title;
+        card.querySelector('.item-location').textContent = item.location;
+        card.querySelector('.item-time').textContent = formatTime(item.time);
+
+        card.querySelector('.published').textContent =
+          '发布于 ' + formatTime(item.createdAt);
+
+        card.querySelector('.status').textContent = item.status;
+
+        card.querySelector('.contact-summary').textContent =
+          '联系方式：' + maskContact(item.contact);
+
+        const thumbnail = card.querySelector('.item-thumbnail');
+
+        if (validImageData(item.image)) {
+          thumbnail.src = item.image;
+          thumbnail.alt = item.title;
+          thumbnail.hidden = false;
+        }
+
+        card.querySelector('.detail-button').addEventListener(
+          'click',
+          () => openDetail(item)
+        );
+
+        fragment.appendChild(card);
+      }
+
+      list.replaceChildren(fragment);
+
+      byId('resultCount').textContent = query
+        ? '找到 ' + filtered.length + ' 条'
+        : '共 ' + items.length + ' 条';
+
+      byId('clearSearch').hidden = !searchInput.value;
+      byId('emptyState').hidden = filtered.length !== 0;
+
+      byId('emptyTitle').textContent = query
+        ? '没有找到相关失物信息'
+        : '还没有失物信息';
+
+      byId('emptyText').textContent = query
+        ? '试试其他物品名称或丢失地点，也可以清空搜索查看全部。'
+        : '发布第一条信息，让寻找从这里开始。';
+
+      byId('emptyLink').hidden = Boolean(query);
+    }
+
+    function openDetail(item) {
+      activeItem = item;
+
+      byId('detailTitle').textContent = item.title;
+      byId('detailStatus').textContent = item.status;
+      byId('detailLocation').textContent = item.location;
+      byId('detailTime').textContent = formatTime(item.time);
+      byId('detailCreatedAt').textContent = formatTime(item.createdAt);
+      byId('detailContact').textContent = maskContact(item.contact);
+      byId('revealContact').hidden = false;
+
+      const image = byId('detailImage');
+      image.removeAttribute('src');
+      image.hidden = true;
+
+      if (validImageData(item.image)) {
+        image.src = item.image;
+        image.alt = item.title;
+        image.hidden = false;
+      }
+
+      dialog.showModal();
+    }
+
+    function readFile(file) {
+      return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+
+        reader.onload = () => resolve(reader.result);
+        reader.onerror = () => {
+          reject(new Error('图片读取失败，请重新选择。'));
+        };
+
+        reader.readAsDataURL(file);
+      });
+    }
+
+    // 原图与 Base64 存储值均限制在 500KB 内。
+    // 必要时直接在浏览器中压缩图片。
+    async function prepareImage(file) {
+      if (!file) return '';
+
+      if (!IMAGE_TYPES.has(file.type)) {
+        throw new Error('请选择 PNG、JPG、WEBP 或 GIF 图片。');
+      }
+
+      if (file.size > MAX_IMAGE_BYTES) {
+        throw new Error('图片不能超过500KB，请选择较小的图片。');
+      }
+
+      const original = await readFile(file);
+      if (validImageData(original)) return original;
+
+      const image = await new Promise((resolve, reject) => {
+        const candidate = new Image();
+
+        candidate.onload = () => resolve(candidate);
+        candidate.onerror = () => {
+          reject(new Error('图片格式无效，请更换图片。'));
+        };
+
+        candidate.src = original;
+      });
+
+      const canvas = document.createElement('canvas');
+      const context = canvas.getContext('2d');
+
+      if (!context) {
+        throw new Error('当前浏览器无法处理图片，请使用更小的图片。');
+      }
+
+      let width = Math.min(image.naturalWidth, 1000);
+      let height = Math.max(
+        1,
+        Math.round(image.naturalHeight * width / image.naturalWidth)
+      );
+
+      for (let attempt = 0; attempt < 7; attempt++) {
+        canvas.width = Math.max(1, Math.round(width));
+        canvas.height = Math.max(1, Math.round(height));
+
+        context.fillStyle = '#ffffff';
+        context.fillRect(0, 0, canvas.width, canvas.height);
+        context.drawImage(image, 0, 0, canvas.width, canvas.height);
+
+        const optimized = canvas.toDataURL('image/jpeg', 0.82);
+
+        if (validImageData(optimized)) return optimized;
+
+        width *= 0.75;
+        height *= 0.75;
+      }
+
+      throw new Error(
+        '图片转换后仍超过500KB，请选择较小的图片。'
+      );
+    }
+
+    form.addEventListener('submit', async event => {
+      event.preventDefault();
+
+      const title = byId('title').value.trim();
+      const location = byId('location').value.trim();
+      const time = byId('time').value;
+      const contact = byId('contact').value.trim();
+
+      if (!title || !location) {
+        window.alert('请填写物品名称和丢失地点');
+
+        const target = !title ? byId('title') : byId('location');
+        target.focus();
+        return;
+      }
+
+      if (!contact) {
+        window.alert('请填写联系方式');
+        byId('contact').focus();
+        return;
+      }
+
+      const button = byId('publishButton');
+      if (button.disabled) return;
+
+      button.disabled = true;
+      button.textContent = '正在保存…';
+
+      try {
+        const image = await prepareImage(byId('image').files[0]);
+
+        // 再次读取，避免覆盖另一标签页刚发布的信息。
+        items = loadItems();
+
+        const createdAt = Date.now();
+
+        const item = {
+          id: createdAt + '-' + Math.random().toString(36).slice(2, 10),
+          title,
+          location,
+          time,
+          contact,
+          status: '待认领',
+          createdAt,
+          image
+        };
+
+        if (!saveItems([...items, item])) return;
+
+        form.reset();
+        searchInput.value = '';
+        renderItems();
+        showNotice('发布成功');
+      } catch (error) {
+        showNotice(error.message || '发布失败，请重试。', true);
+      } finally {
+        button.disabled = false;
+        button.textContent = '发布失物信息 ＋';
+      }
+    });
+
+    byId('searchForm').addEventListener('submit', event => {
+      event.preventDefault();
+      renderItems();
+    });
+
+    searchInput.addEventListener('input', renderItems);
+
+    byId('clearSearch').addEventListener('click', () => {
+      searchInput.value = '';
+      renderItems();
+      searchInput.focus();
+    });
+
+    byId('closeDetail').addEventListener('click', () => {
+      dialog.close();
+    });
+
+    dialog.addEventListener('click', event => {
+      if (event.target === dialog) dialog.close();
+    });
+
+    dialog.addEventListener('close', () => {
+      activeItem = null;
+    });
+
+    byId('revealContact').addEventListener('click', () => {
+      if (activeItem) {
+        byId('detailContact').textContent = activeItem.contact;
+        byId('revealContact').hidden = true;
+      }
+    });
+
+    window.addEventListener('storage', event => {
+      if (event.key === STORAGE_KEY || event.key === null) {
+        items = loadItems();
+
+        if (dialog.open) dialog.close();
+
+        renderItems();
+      }
+    });
+
+    renderItems();
+  </script>
+</body>
+</html>
